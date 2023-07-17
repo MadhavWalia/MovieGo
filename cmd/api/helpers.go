@@ -6,11 +6,25 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 
+	"github.com/joho/godotenv"
 	"github.com/julienschmidt/httprouter"
 )
+
+//function to load the environment variables
+func loadEnv(key string) (string, error) {
+	//Loading the environment variables from the .env file
+	err := godotenv.Load(".env")
+	if err != nil {
+		return "", err
+	}
+
+	//Getting the value of the key from the environment variables
+	return os.Getenv(key), nil
+}
 
 
 type envelope map[string]any
