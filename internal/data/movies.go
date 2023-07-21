@@ -1,8 +1,11 @@
 package data
 
 import (
+	"database/sql"
+	"errors"
 	"time"
 
+	"github.com/lib/pq"
 	"moviego.madhav.net/internal/validator"
 )
 
@@ -34,4 +37,147 @@ func ValidateMovie(v *validator.Validator, movie *Movie) {
 	v.Check(len(movie.Genres) >= 1, "genres", "must contain at least 1 genre")
 	v.Check(len(movie.Genres) <= 5, "genres", "must not contain more than 5 genres")
 	v.Check(validator.Unique(movie.Genres), "genres", "must not contain duplicate values")
+}
+
+
+// Wrapper around the sql.DB connection pool
+type MovieModel struct {
+	DB *sql.DB
+}
+
+// CRUD OPERATIONS for the MovieModel
+
+
+// Insert a new movie record into the movies table
+func (m MovieModel) Insert(movie *Movie) error {
+	// Defining the SQL query for inserting a new record
+	query := `
+		INSERT INTO movies (title, year, runtime, genres)
+		VALUES ($1, $2, $3, $4)
+		RETURNING id, created_at, version`
+
+	// Creating an args slice to store the values for the placeholder parameters
+	args := []any{movie.Title, movie.Year, movie.Runtime, pq.Array(movie.Genres)}
+
+	// Executing the query using the DB connection pool
+	return m.DB.QueryRow(query, args...).Scan(&movie.ID, &movie.CreatedAt, &movie.Version)
+}
+
+
+// Get a specific movie based on its id
+func (m MovieModel) Get(id int64) (*Movie, error) {
+	// Validating the id parameter
+	if id < 1 {
+		return nil, ErrRecordNotFound
+	}
+
+	// Defining the SQL query for retrieving the movie record
+	query := `
+		SELECT id, created_at, title, year, runtime, genres, version
+		FROM movies
+		WHERE id = $1`
+
+	// Declaring a movie struct to hold the data returned by the query
+	var movie Movie
+
+	// Executing the query using the DB connection pool
+	err := m.DB.QueryRow(query, id).Scan(
+		&movie.ID,
+		&movie.CreatedAt,
+		&movie.Title,
+		&movie.Year,
+		&movie.Runtime,
+		pq.Array(&movie.Genres),
+		&movie.Version,
+	)
+
+	// Handling the errors
+	if err != nil {
+		switch {
+			case errors.Is(err, sql.ErrNoRows):
+				return nil, ErrRecordNotFound
+			default:
+				return nil, err
+		}
+	}
+
+	// Returning the movie struct
+	return &movie, nil
+}
+
+
+// Update a specific movie based on its id
+func (m MovieModel) Update(movie *Movie) error {
+	// Defining the SQL query for updating the movie record
+	query := `
+		UPDATE movies
+		SET title = $1, year = $2, runtime = $3, genres = $4, version = version + 1
+		WHERE id = $5
+		RETURNING version`
+
+	// Creating an args slice to store the values for the placeholder parameters
+	args := []any{movie.Title, movie.Year, movie.Runtime, pq.Array(movie.Genres), movie.ID}
+
+	// Executing the query using the DB connection pool
+	return m.DB.QueryRow(query, args...).Scan(&movie.Version)
+}
+
+
+// Delete a specific movie based on its id
+func (m MovieModel) Delete(id int64) error {
+	// Validating the id parameter
+	if id < 1 {
+		return ErrRecordNotFound
+	}
+
+
+	// Defining the SQL query for deleting the movie record
+	query := `
+		DELETE FROM movies
+		WHERE id = $1`
+
+	
+	// Executing the query using the DB connection pool
+	result, err := m.DB.Exec(query, id)
+	if err != nil {
+		return err
+	}
+
+
+	// Checking if the movie record was found
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return ErrRecordNotFound
+	}
+
+	// Returning nil if the movie record was found
+	return nil
+}
+
+// Mock Movie Model for testing
+type MockMovieModel struct {}
+
+// CRUD OPERATIONS for the MockMovieModel
+
+// Insert a new movie record into the movies table
+func (m MockMovieModel) Insert(movie *Movie) error {
+	return nil
+}
+
+// Get a specific movie based on its id
+func (m MockMovieModel) Get(id int64) (*Movie, error) {
+	return nil, nil
+}
+
+// Update a specific movie based on its id
+func (m MockMovieModel) Update(movie *Movie) error {
+	return nil
+}
+
+// Delete a specific movie based on its id
+func (m MockMovieModel) Delete(id int64) error {
+	return nil
 }
