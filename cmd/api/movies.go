@@ -13,9 +13,9 @@ import (
 func (app *application) createMovieHandler(w http.ResponseWriter, r *http.Request) {
 	// Declare an input struct to hold the expected data from the client (Resquest DTO)
 	var input struct {
-		Title string `json:"title"`
-		Year int32 `json:"year"`
-		Runtime int32 `json:"runtime"`
+		Title *string `json:"title"`
+		Year *int32 `json:"year"`
+		Runtime *int32 `json:"runtime"`
 		Genres []string `json:"genres"`
 	}
 
@@ -94,7 +94,7 @@ func (app *application) showMovieHandler(w http.ResponseWriter, r *http.Request)
 }
 
 
-// updateMovieHandler for the "PUT /v1/movies/:id" endpoint
+// updateMovieHandler for the "PATCH /v1/movies/:id" endpoint
 func (app *application) updateMovieHandler(w http.ResponseWriter, r *http.Request) {
 	// Extract the id from the URL	
 	id, err := app.readIDParam(r)
@@ -118,9 +118,9 @@ func (app *application) updateMovieHandler(w http.ResponseWriter, r *http.Reques
 
 	// Declare an input struct to hold the expected data from the client (Resquest DTO)
 	var input struct {
-		Title string `json:"title"`
-		Year int32 `json:"year"`
-		Runtime int32 `json:"runtime"`
+		Title *string `json:"title"`
+		Year *int32 `json:"year"`
+		Runtime *int32 `json:"runtime"`
 		Genres []string `json:"genres"`
 	}
 
@@ -132,11 +132,19 @@ func (app *application) updateMovieHandler(w http.ResponseWriter, r *http.Reques
 	}
 
 
-	// Copy the new data across to the movie record
-	movie.Title = input.Title
-	movie.Year = input.Year
-	movie.Runtime = input.Runtime
-	movie.Genres = input.Genres
+	// Copy the new data across to the movie record if it is provided
+	if input.Title != nil {
+		movie.Title = input.Title
+	}
+	if input.Year != nil {
+		movie.Year = input.Year
+	}
+	if input.Runtime != nil {
+		movie.Runtime = input.Runtime
+	}
+	if input.Genres != nil {
+		movie.Genres = input.Genres
+	}
 
 	// Validate the input
 	v := validator.New()
