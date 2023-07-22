@@ -6,15 +6,17 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
 
 	"github.com/joho/godotenv"
 	"github.com/julienschmidt/httprouter"
+	"moviego.madhav.net/internal/validator"
 )
 
-//function to load the environment variables
+// function to load the environment variables
 func loadEnv(key string) (string, error) {
 	//Loading the environment variables from the .env file
 	err := godotenv.Load(".env")
@@ -127,7 +129,7 @@ func (app *application) readJson(w http.ResponseWriter, r *http.Request, dst any
 }
 
 
-// Read the id parameter from the URL
+// method to read the id parameter from the URL
 func (app *application) readIDParam (r *http.Request) (int64, error) {
 	params := httprouter.ParamsFromContext(r.Context())
 	id, err := strconv.ParseInt(params.ByName("id"), 10, 64)
@@ -135,4 +137,56 @@ func (app *application) readIDParam (r *http.Request) (int64, error) {
 		return 0, errors.New("invalid id parameter")
 	}
 	return id, nil
+}
+
+
+// method to read CSV data from the query string
+func (app *application) readCSV(ps url.Values, key string, defaultValue []string) []string {
+	// Extract the value from the query string
+	csv := ps.Get(key)
+
+	// If no key exists, or the value is empty, return the default value
+	if csv == "" {
+		return defaultValue
+	}
+
+	// Else, split the value into a []string slice
+	return strings.Split(csv, ",")
+}
+
+
+// method to read an integer value from the query string and convert it to an int
+func (app *application) readInt(ps url.Values, key string, defaultValue int, v *validator.Validator) int {
+	// Extract the value from the query string
+	s := ps.Get(key)
+
+	// If no key exists, or the value is empty, return the default value
+	if s == "" {
+		return 0
+	}
+
+	// Else, try to convert the value to an int
+	i, err := strconv.Atoi(s)
+	if err != nil {
+		v.AddError(key, "must be an integer value")
+		return 0
+	}
+
+	// Return the integer value
+	return i
+}
+
+
+// method to read a string value from the query string
+func (app *application) readString(ps url.Values, key string, defaultValue string) string {
+	// Extract the value from the query string
+	s := ps.Get(key)
+
+	// If no key exists, or the value is empty, return the default value
+	if s == "" {
+		return defaultValue
+	}
+
+	// Return the string value
+	return s
 }

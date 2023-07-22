@@ -191,6 +191,68 @@ func (m MovieModel) Delete(id int64) error {
 	return nil
 }
 
+
+// List all movies in the database
+func (m MovieModel) GetAll(title string, genres []string, filters Filters) ([]*Movie, error) {
+	// Defining the SQL query for retrieving the movie records
+	query := `
+		SELECT id, created_at, title, year, runtime, genres, version
+		FROM movies
+		ORDER BY id`
+
+
+	// Creating a new context with a 3 second timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+
+	// Executing the query using the DB connection pool
+	rows, err := m.DB.QueryContext(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	// Closing the rows object when we return from the function
+	defer rows.Close()
+
+
+	// Declaring a slice to hold the movie records
+	movies := []*Movie{}
+
+
+	// Looping through the rows in the result set
+	for rows.Next() {
+		// Initializing an empty movie struct
+		var movie Movie
+
+		// Scanning the values from each row into the movie struct
+		err := rows.Scan(
+			&movie.ID,
+			&movie.CreatedAt,
+			&movie.Title,
+			&movie.Year,
+			&movie.Runtime,
+			pq.Array(&movie.Genres),
+			&movie.Version,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		// Appending the movie struct to the slice
+		movies = append(movies, &movie)
+	}
+
+
+	// Handling the errors encountered during the rows.Next() loop
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+
+	// Returning the slice of movies
+	return movies, nil
+}
+
 // Mock Movie Model for testing
 type MockMovieModel struct {}
 
@@ -214,4 +276,9 @@ func (m MockMovieModel) Update(movie *Movie) error {
 // Delete a specific movie based on its id
 func (m MockMovieModel) Delete(id int64) error {
 	return nil
+}
+
+// List all movies in the database
+func (m MockMovieModel) GetAll(title string, genres []string, filters Filters) ([]*Movie, error) {
+	return nil, nil
 }

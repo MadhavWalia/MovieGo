@@ -213,3 +213,48 @@ func (app *application) deleteMovieHandler(w http.ResponseWriter, r *http.Reques
 	}
 }
 
+
+// listMoviesHandler for the "GET /v1/movies" endpoint
+func (app *application) listMoviesHandler(w http.ResponseWriter, r *http.Request) {
+	// Declare an input struct to hold the expected data from the client (Resquest DTO)
+	var input struct {
+		Title string
+		Genres []string
+		data.Filters
+	}
+
+
+	// Validating the query string parameters
+	v := validator.New()
+	qs := r.URL.Query()
+
+	input.Title = app.readString(qs, "title", "")
+	input.Genres = app.readCSV(qs, "genres", []string{})
+
+	input.Filters.Page = app.readInt(qs, "page", 1, v)
+	input.Filters.PageSize = app.readInt(qs, "page_size", 20, v)
+
+	input.Filters.Sort = app.readString(qs, "sort", "id")
+	input.Filters.SortSafelist = []string{"id", "title", "year", "runtime", "-id", "-title", "-year", "-runtime"}
+
+	if !v.Valid() {
+		app.failedValidationResponse(w, r, v.Errors)
+		return
+	}
+
+
+	// Retriving the movies from the database, based on the filters
+	movies, err := app.models.Movies.GetAll(input.Title, input.Genres, input.Filters)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
+
+	// Return a 200 OK status code along with the movie data
+	err = app.writeJson(w, http.StatusOK, envelope{"movies": movies}, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
+}
+
