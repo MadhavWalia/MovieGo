@@ -198,6 +198,8 @@ func (m MovieModel) GetAll(title string, genres []string, filters Filters) ([]*M
 	query := `
 		SELECT id, created_at, title, year, runtime, genres, version
 		FROM movies
+		WHERE (to_tsvector('simple', title) @@ plainto_tsquery('simple', $1) OR $1 = '')
+		AND (genres @> $2 OR $2 = '{}')
 		ORDER BY id`
 
 
@@ -207,7 +209,7 @@ func (m MovieModel) GetAll(title string, genres []string, filters Filters) ([]*M
 
 
 	// Executing the query using the DB connection pool
-	rows, err := m.DB.QueryContext(ctx, query)
+	rows, err := m.DB.QueryContext(ctx, query, title, pq.Array(genres))
 	if err != nil {
 		return nil, err
 	}
@@ -252,6 +254,10 @@ func (m MovieModel) GetAll(title string, genres []string, filters Filters) ([]*M
 	// Returning the slice of movies
 	return movies, nil
 }
+
+
+// CRUD OPERATIONS for the MockMovieModel
+
 
 // Mock Movie Model for testing
 type MockMovieModel struct {}
