@@ -244,7 +244,7 @@ func (app *application) listMoviesHandler(w http.ResponseWriter, r *http.Request
 
 
 	// Retriving the movies from the database, based on the filters
-	movies, err := app.models.Movies.GetAll(input.Title, input.Genres, input.Filters)
+	movies, metadata, err := app.models.Movies.GetAll(input.Title, input.Genres, input.Filters)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
@@ -252,7 +252,7 @@ func (app *application) listMoviesHandler(w http.ResponseWriter, r *http.Request
 
 
 	// Return a 200 OK status code along with the movie data
-	err = app.writeJson(w, http.StatusOK, envelope{"movies": movies}, nil)
+	err = app.writeJson(w, http.StatusOK, envelope{"movies": movies, "metadata": metadata}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 	}
