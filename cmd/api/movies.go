@@ -1,9 +1,10 @@
 package main
 
 import (
-	"fmt"
 	"errors"
+	"fmt"
 	"net/http"
+	"strconv"
 
 	"moviego.madhav.net/internal/data"
 	"moviego.madhav.net/internal/validator"
@@ -113,6 +114,15 @@ func (app *application) updateMovieHandler(w http.ResponseWriter, r *http.Reques
 			app.serverErrorResponse(w, r, err)
 		}
 		return
+	}
+
+
+	// Checking if the "X-Version" header is provided and if it matches the current version of the movie record
+	if r.Header.Get("X-Expected-Version") != "" {
+		if strconv.FormatInt(int64(movie.Version), 32) != r.Header.Get("X-Expected-Version") {
+			app.editConflictResponse(w, r)
+			return
+		}
 	}
 
 
