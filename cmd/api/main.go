@@ -13,6 +13,7 @@ import (
 	_ "github.com/lib/pq"
 
 	"moviego.madhav.net/internal/data"
+	"moviego.madhav.net/internal/logs"
 )
 
 
@@ -31,7 +32,7 @@ type config struct {
 
 type application struct {
 	config config
-	logger *log.Logger
+	logger *logs.Logger
 	models data.Models
 }
 
@@ -58,17 +59,17 @@ func main() {
 	flag.Parse()
 
 	// Initialize a new logger which writes messages to the standard outstream
-	logger := log.New(os.Stdout, "", log.Ldate|log.Ltime)
+	logger := logs.New(os.Stdout, logs.LevelInfo)
 
 	// Initialize a new connection pool, passing in the DSN from the config struct
 	db, err := openDB(cfg)
 	if err != nil {
-		logger.Fatal(err)
+		logger.PrintFatal(err, nil)
 	}
 	defer db.Close()
 
 	// Log a message to say that the connection pool has been successfully
-	logger.Printf("database connection pool established")
+	logger.PrintInfo("database connection pool established", nil)
 
 	// Initialize a new instance of application containing the dependencies
 	app := &application{
@@ -81,16 +82,23 @@ func main() {
 	srv := &http.Server{
 		Addr: fmt.Sprintf(":%d", cfg.port),
 		Handler: app.routes(),
+		ErrorLog: log.New(logger, "", 0),
 		IdleTimeout: time.Minute,
 		ReadTimeout: 10 * time.Second,
 		WriteTimeout: 30 * time.Second,
 	}
 
+	// Log a message to say that the server is starting
+	logger.PrintInfo("starting server", map[string]string{
+		"addr": srv.Addr,
+		"env": cfg.env,
+	})
+
 	// Start the HTTP server
-	logger.Printf("starting %s server on %s", cfg.env, srv.Addr)
 	err = srv.ListenAndServe()
-	logger.Fatal(err)
+	logger.PrintFatal(err, nil)
 }
+
 
 // The openDB() function wraps sql.Open() and returns a sql.DB connection pool
 func openDB(cfg config) (*sql.DB, error) {
