@@ -8,7 +8,7 @@ import (
 
 
 // routes method which returns a httprouter.Router instance containing the application routes
-func(app *application) routes() *httprouter.Router {
+func(app *application) routes() http.Handler {
 	// Initialize the new httprouter router instance
 	router := httprouter.New()
 
@@ -25,5 +25,5 @@ func(app *application) routes() *httprouter.Router {
 	router.HandlerFunc(http.MethodGet, "/v1/movies", app.listMoviesHandler)
 
 	// Return the httprouter instance
-	return router
+	return app.recoverPanic(app.rateLimit(router))
 }

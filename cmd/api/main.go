@@ -4,9 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"flag"
-	"fmt"
 	"log"
-	"net/http"
 	"os"
 	"time"
 
@@ -28,13 +26,20 @@ type config struct {
 		maxIdleConns int
 		maxIdleTime string
 	}
+	limiter struct {
+		rps float64
+		burst int
+		enabled bool
+	}
 }
+
 
 type application struct {
 	config config
 	logger *logs.Logger
 	models data.Models
 }
+
 
 func main() {
 
@@ -48,18 +53,30 @@ func main() {
 	}
 
 	// Read the value of the port and env command-line flags into the config struct
+
+	//Application Settings Flags
 	flag.IntVar(&cfg.port, "port", 4000, "API server port")
 	flag.StringVar(&cfg.env, "env", "development", "Environment (development|staging|production)")
 	flag.StringVar(&cfg.db.dsn, "db-dsn", dsn, "PostgreSQL DSN")
 
+	// Database Settings Flags
 	flag.IntVar(&cfg.db.maxOpenConns, "db-max-open-conns", 25, "PostgreSQL max open connections")
 	flag.IntVar(&cfg.db.maxIdleConns, "db-max-idle-conns", 25, "PostgreSQL max idle connections")
 	flag.StringVar(&cfg.db.maxIdleTime, "db-max-idle-time", "15m", "PostgreSQL max connection idle time")
 
+	// Rate Limiter Settings Flags
+	flag.Float64Var(&cfg.limiter.rps, "limiter-rps", 2, "Rate limiter maximum requests per second")
+	flag.IntVar(&cfg.limiter.burst, "limiter-burst", 4, "Rate limiter maximum burst")
+	flag.BoolVar(&cfg.limiter.enabled, "limiter-enabled", true, "Rate limiter enabled")
+
+
+	// Parse the command-line flags
 	flag.Parse()
+
 
 	// Initialize a new logger which writes messages to the standard outstream
 	logger := logs.New(os.Stdout, logs.LevelInfo)
+
 
 	// Initialize a new connection pool, passing in the DSN from the config struct
 	db, err := openDB(cfg)
@@ -68,8 +85,10 @@ func main() {
 	}
 	defer db.Close()
 
+
 	// Log a message to say that the connection pool has been successfully
 	logger.PrintInfo("database connection pool established", nil)
+
 
 	// Initialize a new instance of application containing the dependencies
 	app := &application{
@@ -78,25 +97,12 @@ func main() {
 		models: data.NewModels(db),
 	}
 
-	// Declare a HTTP server with some timeout settings, and bind the servemux
-	srv := &http.Server{
-		Addr: fmt.Sprintf(":%d", cfg.port),
-		Handler: app.routes(),
-		ErrorLog: log.New(logger, "", 0),
-		IdleTimeout: time.Minute,
-		ReadTimeout: 10 * time.Second,
-		WriteTimeout: 30 * time.Second,
-	}
-
-	// Log a message to say that the server is starting
-	logger.PrintInfo("starting server", map[string]string{
-		"addr": srv.Addr,
-		"env": cfg.env,
-	})
 
 	// Start the HTTP server
-	err = srv.ListenAndServe()
-	logger.PrintFatal(err, nil)
+	err = app.serve()
+	if err != nil {
+		logger.PrintFatal(err, nil)
+	}
 }
 
 
