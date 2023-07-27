@@ -62,6 +62,16 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 	}
 
 
+	// Send a welcome email to the user as a background task
+	app.background(func() {
+		// Sending the welcome email
+		err = app.mailer.Send(user.Email, "user_welcome.tmpl", user)
+		if err != nil {
+			app.logger.PrintError(err, nil)
+		}
+	})
+	
+	
 	// Return a 201 Created status code along with the user data
 	err = app.writeJson(w, http.StatusCreated, envelope{"user": user}, nil)
 	if err != nil {
