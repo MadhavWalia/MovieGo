@@ -41,7 +41,7 @@ func (app *application) serve() error{
 
 
 		// Logging a message to say that the signal has been caught
-		app.logger.PrintInfo("shutting down server", map[string]string{
+		app.logger.PrintInfo("caught the signal", map[string]string{
 			"signal": s.String(),
 		})
 
@@ -51,8 +51,24 @@ func (app *application) serve() error{
 		defer cancel()
 
 
-		// Calling Shutdown() method on our server, passing in the context and returning the error
-		shutdownError <- srv.Shutdown(ctx)
+		// Calling Shutdown() method on our server, passing in the context and returning the error only id we get an error
+		err := srv.Shutdown(ctx)
+		if err != nil {
+			shutdownError <- err
+		}
+
+
+		// Logging a message to say that we're waiting for any background goroutines to complete their tasks
+		app.logger.PrintInfo("completing background tasks", map[string]string{
+			"addr": srv.Addr,
+		})
+
+
+		// Blocking until the all the background goroutines have completed
+		app.wg.Wait()
+
+		// Returning nil to indicate that the shutdown completed successfully
+		shutdownError <- nil
 	}()
 
 
