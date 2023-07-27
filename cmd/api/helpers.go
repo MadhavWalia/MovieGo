@@ -190,3 +190,26 @@ func (app *application) readString(ps url.Values, key string, defaultValue strin
 	// Return the string value
 	return s
 }
+
+
+// method to run background tasks
+func (app *application) background(fn func()) {
+	// Incrementing the WaitGroup counter
+	app.wg.Add(1)
+
+	// Launching a background goroutine
+	go func() {
+		// Decrementing the WaitGroup counter when the goroutine completes
+		defer app.wg.Done()
+
+		// Recovering any panic
+		defer func() {
+			if err := recover(); err != nil {
+				app.logger.PrintError(fmt.Errorf("%s", err), nil)
+			}
+		}()
+
+		// Executing the arbitrary function that we passed as the parameter
+		fn()
+	}()
+}
