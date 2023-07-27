@@ -1,0 +1,33 @@
+{{define "subject"}}Welcome to MovieGo!{{end}}
+
+{{define "plainBody"}}
+Hi,
+
+Welcome to MovieGo! We are glad you are here. 
+
+For reference, your username is: {{.ID}}.
+
+Thanks,
+The MovieGo Team
+{{end}}
+
+{{define "htmlBody"}}
+<!doctype html>
+
+<html>
+
+<head>
+  <meta name="viewport" content="width=device-width" />
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+</head>
+
+<body>
+  <p>Hi,</p>
+  <p>Welcome to MovieGo! We are glad you are here.</p>
+  <p>For reference, your username is: {{.ID}}.</p>
+  <p>Thanks,</p>
+  <p>The MovieGo Team</p>
+</body>
+
+</html>
+{{end}}
