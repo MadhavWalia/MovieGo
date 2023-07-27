@@ -22,6 +22,7 @@ type Models struct {
 		GetAll(title string, genres []string, filters Filters) ([]*Movie, Metadata, error)
 	}
 	Users UserModel
+	Tokens TokenModel
 }
 
 
@@ -30,6 +31,7 @@ func NewModels(db *sql.DB) Models {
 	return Models{
 		Movies: MovieModel{DB: db},
 		Users: UserModel{DB: db},
+		Tokens: TokenModel{DB: db},
 	}
 }
 
