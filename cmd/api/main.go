@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"flag"
+	"sync"
 	"log"
 	"os"
 	"time"
@@ -12,6 +13,7 @@ import (
 
 	"moviego.madhav.net/internal/data"
 	"moviego.madhav.net/internal/logs"
+	"moviego.madhav.net/internal/mail"
 )
 
 
@@ -31,6 +33,13 @@ type config struct {
 		burst int
 		enabled bool
 	}
+	smtp struct {
+		host string
+		port int
+		username string
+		password string
+		sender string
+	}
 }
 
 
@@ -38,6 +47,8 @@ type application struct {
 	config config
 	logger *logs.Logger
 	models data.Models
+	mailer mail.Mailer
+	wg sync.WaitGroup
 }
 
 
@@ -61,13 +72,20 @@ func main() {
 
 	// Database Settings Flags
 	flag.IntVar(&cfg.db.maxOpenConns, "db-max-open-conns", 25, "PostgreSQL max open connections")
-	flag.IntVar(&cfg.db.maxIdleConns, "db-max-idle-conns", 25, "PostgreSQL max idle connections")
+	flag.IntVar(&cfg.db.maxIdleConns, "db-max-idle-conns", 2525, "PostgreSQL max idle connections")
 	flag.StringVar(&cfg.db.maxIdleTime, "db-max-idle-time", "15m", "PostgreSQL max connection idle time")
 
 	// Rate Limiter Settings Flags
 	flag.Float64Var(&cfg.limiter.rps, "limiter-rps", 2, "Rate limiter maximum requests per second")
 	flag.IntVar(&cfg.limiter.burst, "limiter-burst", 4, "Rate limiter maximum burst")
 	flag.BoolVar(&cfg.limiter.enabled, "limiter-enabled", true, "Rate limiter enabled")
+
+	// SMTP Settings Flags
+	flag.StringVar(&cfg.smtp.host, "smtp-host", "smtp.mailtrap.io", "SMTP server hostname")
+	flag.IntVar(&cfg.smtp.port, "smtp-port", 25, "SMTP server port")
+	flag.StringVar(&cfg.smtp.username, "smtp-username", "0836f8d5c95a14", "SMTP server username")
+	flag.StringVar(&cfg.smtp.password, "smtp-password", "fcf268bcf40b9d", "SMTP server password")
+	flag.StringVar(&cfg.smtp.sender, "smtp-sender", "MovieGo <madhavwalia8139@gmail.com>", "SMTP sender email address")
 
 
 	// Parse the command-line flags
@@ -95,6 +113,7 @@ func main() {
 		config: cfg,
 		logger: logger,
 		models: data.NewModels(db),
+		mailer: mail.New(cfg.smtp.host, cfg.smtp.port, cfg.smtp.username, cfg.smtp.password, cfg.smtp.sender),
 	}
 
 
