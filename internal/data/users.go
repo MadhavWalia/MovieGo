@@ -2,6 +2,7 @@ package data
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
 	"errors"
 	"time"
@@ -218,3 +219,48 @@ func (m UserModel) Update(user *User) error {
 	return nil
 }
 
+
+// Retrieving a user record based on the token hash and scope from the tokens table
+func (m UserModel) GetForToken(tokenScope, tokenPlaintext string) (*User, error) {
+	// Calculating the hashed version of the plaintext token
+	tokenHash := sha256.Sum256([]byte(tokenPlaintext))
+
+	// Defining the SQL query for retrieving the user record based on the token hash and scope
+	query := `
+	SELECT users.id, users.created_at, users.name, users.email, users.password_hash, users.activated, users.version
+	FROM users
+	INNER JOIN tokens
+	ON users.id = tokens.user_id
+	WHERE tokens.hash = $1 AND tokens.scope = $2 AND tokens.expiry > $3`
+
+	// Creating an args slice to hold the values for the placeholder parameters
+	args := []any{tokenHash[:], tokenScope, time.Now()}
+
+	// Creating a new context with a 3 second timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	// Executing the query and storing the result in a new user struct
+	var user User
+	err := m.DB.QueryRowContext(ctx, query, args...).Scan(
+		&user.ID,
+		&user.CreatedAt,
+		&user.Name,
+		&user.Email,
+		&user.Password.hash,
+		&user.Activated,
+		&user.Version,
+	)
+	if err != nil {
+		switch {
+			// If there is no matching record, return the ErrRecordNotFound custom error
+			case errors.Is(err, sql.ErrNoRows):
+				return nil, ErrRecordNotFound
+			default:
+				return nil, err
+		}
+	}
+
+	// Returning the user struct
+	return &user, nil
+}
