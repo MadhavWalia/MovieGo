@@ -33,5 +33,5 @@ func(app *application) routes() http.Handler {
 	)
 
 	// Return the httprouter instance
-	return app.recoverPanic(app.rateLimit(router))
+	return app.recoverPanic(app.rateLimit(app.authenticate(router)))
 }
