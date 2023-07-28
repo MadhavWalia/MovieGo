@@ -17,6 +17,10 @@ var (
 )
 
 
+// Defining an anonymous variable for an empty user struct to differentiate it from an actual erraneous user struct
+var AnonymousUser = &User{}
+
+
 // Defining a User struct to hold the information about a user
 type User struct {
 	ID int64 `json:"id"`
@@ -26,6 +30,12 @@ type User struct {
 	Password password `json:"-"`
 	Activated bool `json:"activated"`
 	Version int `json:"-"`
+}
+
+
+// Checking if the user instance is anonymous
+func (u *User) IsAnonymous() bool {
+	return u == AnonymousUser
 }
 
 
