@@ -143,7 +143,7 @@ func (m UserModel) Insert(user *User) error {
 
 
 // Get a specific user record based on the user email address
-func (m UserModel) GetByEmail(id int64) (*User, error) {
+func (m UserModel) GetByEmail(email string) (*User, error) {
 	// Defining the SQL query for retrieving the user record
 	query := `
 	SELECT id, created_at, name, email, password_hash, activated, version
@@ -156,7 +156,7 @@ func (m UserModel) GetByEmail(id int64) (*User, error) {
 
 	// Executing the query and storing the result in a new user struct
 	var user User
-	err := m.DB.QueryRowContext(ctx, query, id).Scan(
+	err := m.DB.QueryRowContext(ctx, query, email).Scan(
 		&user.ID,
 		&user.CreatedAt,
 		&user.Name,
