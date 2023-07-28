@@ -53,15 +53,15 @@ func (p *password) Set(plaintext string) error {
 
 
 // Method to check if the password is correct
-func (p *password) Check(plaintext string) (bool, error) {
+func (p *password) Matches(plaintext string) (bool, error) {
 	// Compare the plaintext with the hash
 	err := bcrypt.CompareHashAndPassword(p.hash, []byte(plaintext))
 	if err != nil {
 		switch {
 			case errors.Is(err, bcrypt.ErrMismatchedHashAndPassword):
-				return false, bcrypt.ErrMismatchedHashAndPassword
-			default:
 				return false, nil
+			default:
+				return false, err
 		}
 	}
 
