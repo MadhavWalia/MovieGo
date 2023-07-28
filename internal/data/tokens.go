@@ -15,16 +15,17 @@ import (
 // Define the different scopes of the token (what it can access)
 const (
 	ScopeActivation = "activation"
+	ScopeAuthentication = "authentication"
 )
 
 
 // Defining the token struct to hold the details of the token
 type Token struct {
-	Plaintext string
-	Hash []byte
-	UserID int64
-	Expiry time.Time
-	Scope string
+	Plaintext string `json:"token_plaintext"`
+	Hash []byte `json:"-"`
+	UserID int64 `json:"-"`
+	Expiry time.Time `json:"expiry"`
+	Scope string `json:"-"`
 }
 
 
