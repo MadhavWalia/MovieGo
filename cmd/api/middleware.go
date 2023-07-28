@@ -1,13 +1,17 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
-	
+
 	"golang.org/x/time/rate"
+	"moviego.madhav.net/internal/data"
+	"moviego.madhav.net/internal/validator"
 )
 
 // Middleware for panic recovery
@@ -103,6 +107,66 @@ func (app *application) rateLimit(next http.Handler) http.Handler {
 			// Unlocking the mutex before calling the next handler in the chain
 			mu.Unlock()
 		}
+
+		// Calling the next handler in the chain
+		next.ServeHTTP(w, r)
+	})
+}
+
+
+// Middleware for authentication
+func (app *application) authenticate(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Adding the "Vary: Authorization" header to the response
+		w.Header().Add("Vary", "Authorization")
+
+
+		// Extracting the value of the Authorization header from the request
+		authorizationHeader := r.Header.Get("Authorization")
+
+
+		// If there is no Authorization header found, use the contextSetUser() method to set the AnonymousUser in the request context and call the next handler in the chain and return
+		if authorizationHeader == "" {
+			r = app.contextSetUser(r, data.AnonymousUser)
+			next.ServeHTTP(w, r)
+			return
+		}
+
+
+		// If the header is found, then extract the token from the header
+		headerParts := strings.Split(authorizationHeader, " ")
+		// Checking if the header is in the correct format (Bearer <token>)
+		if len(headerParts) != 2 || headerParts[0] != "Bearer" {
+			app.invalidAuthenticationTokenResponse(w, r)
+			return
+		}
+
+
+		// Retrieving the token from the headerParts and performing validation
+		token := headerParts[1]
+		v := validator.New()
+		if data.ValidateTokenPlaintext(v, token); !v.Valid() {
+			app.invalidAuthenticationTokenResponse(w, r)
+			return
+		}
+
+
+		// Retrieving the details of the user from the token
+		user, err := app.models.Users.GetForToken(data.ScopeAuthentication, token)
+		if err != nil {
+			switch {
+				case errors.Is(err, data.ErrRecordNotFound):
+					app.invalidAuthenticationTokenResponse(w, r)
+				default:
+					app.serverErrorResponse(w, r, err)
+			}
+			return
+		}
+
+
+		// Adding the user details to the request context
+		r = app.contextSetUser(r, user)
+
 
 		// Calling the next handler in the chain
 		next.ServeHTTP(w, r)
