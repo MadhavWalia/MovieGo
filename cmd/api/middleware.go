@@ -172,3 +172,47 @@ func (app *application) authenticate(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 	})
 }
+
+
+// Middleware for requiring an authenticated user
+func (app *application) requireAuthenticatedUser(next http.HandlerFunc) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Retrieving the user from the request context
+		user := app.contextGetUser(r)
+
+
+		// If the user is anonymous, return a 401 Unauthorized response
+		if user.IsAnonymous() {
+			app.authenticationRequiredResponse(w, r)
+			return
+		}
+
+
+		// Calling the next handler in the chain
+		next.ServeHTTP(w, r)
+	}) 
+}
+
+
+// Middleware for requiring an activated user
+func (app *application) requireActivatedUser(next http.HandlerFunc) http.HandlerFunc {
+	fn := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Retrieving the user from the request context
+		user := app.contextGetUser(r)
+
+
+		// If the user is not activated, return a 403 Forbidden response
+		if !user.Activated {
+			app.inactiveAccountResponse(w, r)
+			return
+		}
+
+
+		// Calling the next handler in the chain
+		next.ServeHTTP(w, r)
+	})
+
+
+	// Wrap the middleware around the requireAuthenticatedUser() middleware
+	return app.requireAuthenticatedUser(fn)
+}
