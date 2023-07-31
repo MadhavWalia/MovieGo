@@ -4,9 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"flag"
-	"sync"
 	"log"
 	"os"
+	"strings"
+	"sync"
 	"time"
 
 	_ "github.com/lib/pq"
@@ -39,6 +40,9 @@ type config struct {
 		username string
 		password string
 		sender string
+	}
+	cors struct {
+		trustedOrigins []string
 	}
 }
 
@@ -86,6 +90,12 @@ func main() {
 	flag.StringVar(&cfg.smtp.username, "smtp-username", "0836f8d5c95a14", "SMTP server username")
 	flag.StringVar(&cfg.smtp.password, "smtp-password", "fcf268bcf40b9d", "SMTP server password")
 	flag.StringVar(&cfg.smtp.sender, "smtp-sender", "MovieGo <madhavwalia8139@gmail.com>", "SMTP sender email address")
+
+	// CORS Settings Flags
+	flag.Func("cors-trusted-origins", "CORS trusted origins (space separated)", func(val string) error {
+		cfg.cors.trustedOrigins = strings.Fields(val)
+		return nil
+	})
 
 
 	// Parse the command-line flags
