@@ -174,6 +174,51 @@ func (app *application) authenticate(next http.Handler) http.Handler {
 }
 
 
+// Middleware for enabling CORS
+func (app *application) enableCORS(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Adding the "Vary: Origin" header to the response
+		w.Header().Add("Vary", "Origin")
+
+
+		// Adding the "Vary: Access-Control-Request-Method" header to the response
+		w.Header().Add("Vary", "Access-Control-Request-Method")
+
+
+		// Retrieving the value of the "Origin" header from the request
+		origin := r.Header.Get("Origin")
+
+
+		// If origin is present, we need to check whether it is in the trustedOrigins list
+		if origin != "" {
+			// Checking whether the origin is in the trustedOrigins list
+			for i := range app.config.cors.trustedOrigins {
+				if origin == app.config.cors.trustedOrigins[i] {
+					// We set the Access-Control-Allow-Origin header on the response, with the value of the Origin header
+					w.Header().Set("Access-Control-Allow-Origin", origin)
+
+					// Checking whether this is a preflight request
+					if r.Method == http.MethodOptions && r.Header.Get("Access-Control-Request-Method") != "" {
+						// Setting the preflight headers on the response
+						w.Header().Set("Access-Control-Allow-Methods", "OPTIONS, PUT, PATCH, DELETE")
+						w.Header().Set("Access-control-Allow-Headers", "Authorization, Content-Type")
+
+						// Writing the headers to the response along with a 200 OK status code and returning
+						w.WriteHeader(http.StatusOK)
+						return
+					}
+
+					break
+				}
+			}
+		}
+
+
+		// Calling the next handler in the chain
+		next.ServeHTTP(w, r)
+	})
+}
+
 // Middleware for requiring an authenticated user
 func (app *application) requireAuthenticatedUser(next http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
