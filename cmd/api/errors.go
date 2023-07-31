@@ -81,7 +81,19 @@ func (app *application) invalidCredentialsResponse(w http.ResponseWriter, r *htt
 func (app *application) invalidAuthenticationTokenResponse(w http.ResponseWriter, r *http.Request) {
 	// Setting the WWW-Authenticate header to tell the client that it needs to send credentials
 	w.Header().Set("WWW-Authenticate", "Bearer")
-	
+
 	message := "Invalid or missing authentication token"
 	app.errorResponse(w, r, http.StatusUnauthorized, message)
+}
+
+
+func (app *application) authenticationRequiredResponse(w http.ResponseWriter, r *http.Request) {
+	message := "You must be authenticated to access this resource"
+	app.errorResponse(w, r, http.StatusUnauthorized, message)
+}
+
+
+func (app *application) inactiveAccountResponse(w http.ResponseWriter, r *http.Request) {
+	message := "Your user account must be activated to access this resource"
+	app.errorResponse(w, r, http.StatusForbidden, message)
 }
