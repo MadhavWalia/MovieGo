@@ -195,6 +195,7 @@ func (app *application) requireAuthenticatedUser(next http.HandlerFunc) http.Han
 
 
 // Middleware for requiring an activated user
+// It wraps the requireAuthenticatedUser() middleware
 func (app *application) requireActivatedUser(next http.HandlerFunc) http.HandlerFunc {
 	fn := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Retrieving the user from the request context
@@ -216,3 +217,35 @@ func (app *application) requireActivatedUser(next http.HandlerFunc) http.Handler
 	// Wrap the middleware around the requireAuthenticatedUser() middleware
 	return app.requireAuthenticatedUser(fn)
 }
+
+
+// Middleware for requiring a specific permission
+// It wraps the requireActivatedUser() middleware (which in turn wraps the requireAuthenticatedUser() middleware)
+func (app *application) requirePermission(code string, next http.HandlerFunc) http.HandlerFunc {
+	fn := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Retrieving the user from the request context
+		user := app.contextGetUser(r)
+
+
+		// Retrieving the permissions for the given user
+		permissions, err := app.models.Permissions.GetAllForUser(user.ID)
+		if err != nil {
+			app.serverErrorResponse(w, r, err)
+			return
+		}
+
+
+		// Checking if the user has the required permission for the route
+		if !permissions.Include(code) {
+			app.notPermittedResponse(w, r)
+			return
+		}
+
+
+		// Calling the next handler in the chain
+		next.ServeHTTP(w, r)
+	})
+
+	// Wrap the middleware around the requireActivatedUser() middleware
+	return app.requireActivatedUser(fn)
+} 
