@@ -4,7 +4,6 @@ import (
 	"regexp"
 )
 
-
 var (
 	// Define a regex which can be used to match against valid email addresses
 	EmailRX = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+\\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
@@ -39,7 +38,6 @@ func (v *Validator) Check(ok bool, key, message string) {
 	}
 }
 
-
 // In method which checks if a string value is in a list of strings
 func In(value string, list ...string) bool {
 	for _, item := range list {
@@ -50,12 +48,10 @@ func In(value string, list ...string) bool {
 	return false
 }
 
-
 // Matches method which checks if a string value matches a regex pattern
 func Matches(value string, rx *regexp.Regexp) bool {
 	return rx.MatchString(value)
 }
-
 
 // Unique method which checks if all string values in a slice are unique
 func Unique(values []string) bool {

@@ -9,15 +9,13 @@ import (
 	"moviego.madhav.net/internal/validator"
 )
 
-
 // createAuthenticationTokenHandler for the "POST /v1/tokens/authentication" endpoint
 func (app *application) createAuthenticationTokenHandler(w http.ResponseWriter, r *http.Request) {
 	// Declare an input struct to hold the expected data from the client (Resquest DTO)
 	var input struct {
-		Email string `json:"email"`
+		Email    string `json:"email"`
 		Password string `json:"password"`
 	}
-
 
 	// Decode the request body into the input struct
 	err := app.readJson(w, r, &input)
@@ -25,7 +23,6 @@ func (app *application) createAuthenticationTokenHandler(w http.ResponseWriter, 
 		app.badRequestResponse(w, r, err)
 		return
 	}
-
 
 	// Validate the input
 	v := validator.New()
@@ -36,7 +33,6 @@ func (app *application) createAuthenticationTokenHandler(w http.ResponseWriter, 
 		app.failedValidationResponse(w, r, v.Errors)
 		return
 	}
-
 
 	// Check whether a user exists with the provided email address, if not, then send the 401 Unauthorized response
 	user, err := app.models.Users.GetByEmail(input.Email)
@@ -50,7 +46,6 @@ func (app *application) createAuthenticationTokenHandler(w http.ResponseWriter, 
 		return
 	}
 
-
 	// Check if the provided password is correct, if not, then send the 401 Unauthorized response
 	match, err := user.Password.Matches(input.Password)
 	if err != nil {
@@ -63,14 +58,12 @@ func (app *application) createAuthenticationTokenHandler(w http.ResponseWriter, 
 		return
 	}
 
-
 	// Create a new instance of the token model, containing the 24hr expiry time and authentication scope
 	token, err := app.models.Tokens.New(user.ID, 24*time.Hour, data.ScopeAuthentication)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
 	}
-
 
 	// Add the token to the response
 	err = app.writeJson(w, http.StatusCreated, envelope{"authentication_token": token}, nil)

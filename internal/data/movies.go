@@ -13,15 +13,14 @@ import (
 
 // Movie struct which contains information about a movie
 type Movie struct {
-	ID int64  						// Unique integer ID for the movie
-	CreatedAt time.Time  	// Timestamp for when the movie is added to the database
-	Title *string					// Movie title
-	Year *int32						// Movie release year
-	Runtime *int32					// Movie runtime (in minutes)
-	Genres []string				// Slice of genres for the movie (romance, comedy, etc.)
-	Version int32					// Counter to track the number of updates to the movie
+	ID        int64     // Unique integer ID for the movie
+	CreatedAt time.Time // Timestamp for when the movie is added to the database
+	Title     *string   // Movie title
+	Year      *int32    // Movie release year
+	Runtime   *int32    // Movie runtime (in minutes)
+	Genres    []string  // Slice of genres for the movie (romance, comedy, etc.)
+	Version   int32     // Counter to track the number of updates to the movie
 }
-
 
 //Validate method which validates the movie struct
 func ValidateMovie(v *validator.Validator, movie *Movie) {
@@ -41,14 +40,12 @@ func ValidateMovie(v *validator.Validator, movie *Movie) {
 	v.Check(validator.Unique(movie.Genres), "genres", "must not contain duplicate values")
 }
 
-
 // Wrapper around the sql.DB connection pool
 type MovieModel struct {
 	DB *sql.DB
 }
 
 // CRUD OPERATIONS for the MovieModel
-
 
 // Insert a new movie record into the movies table
 func (m MovieModel) Insert(movie *Movie) error {
@@ -68,7 +65,6 @@ func (m MovieModel) Insert(movie *Movie) error {
 	// Executing the query using the DB connection pool
 	return m.DB.QueryRowContext(ctx, query, args...).Scan(&movie.ID, &movie.CreatedAt, &movie.Version)
 }
-
 
 // Get a specific movie based on its id
 func (m MovieModel) Get(id int64) (*Movie, error) {
@@ -104,17 +100,16 @@ func (m MovieModel) Get(id int64) (*Movie, error) {
 	// Handling the errors
 	if err != nil {
 		switch {
-			case errors.Is(err, sql.ErrNoRows):
-				return nil, ErrRecordNotFound
-			default:
-				return nil, err
+		case errors.Is(err, sql.ErrNoRows):
+			return nil, ErrRecordNotFound
+		default:
+			return nil, err
 		}
 	}
 
 	// Returning the movie struct
 	return &movie, nil
 }
-
 
 // Update a specific movie based on its id
 func (m MovieModel) Update(movie *Movie) error {
@@ -143,17 +138,16 @@ func (m MovieModel) Update(movie *Movie) error {
 	err := m.DB.QueryRowContext(ctx, query, args...).Scan(&movie.Version)
 	if err != nil {
 		switch {
-			case errors.Is(err, sql.ErrNoRows):
-				return ErrEditConflict
+		case errors.Is(err, sql.ErrNoRows):
+			return ErrEditConflict
 
-			default:
-				return err
+		default:
+			return err
 		}
 	}
 
 	return nil
 }
-
 
 // Delete a specific movie based on its id
 func (m MovieModel) Delete(id int64) error {
@@ -162,7 +156,6 @@ func (m MovieModel) Delete(id int64) error {
 		return ErrRecordNotFound
 	}
 
-
 	// Defining the SQL query for deleting the movie record
 	query := `
 		DELETE FROM movies
@@ -170,14 +163,13 @@ func (m MovieModel) Delete(id int64) error {
 
 	// Creating a new context with a 3 second timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()	
+	defer cancel()
 
 	// Executing the query using the DB connection pool
 	result, err := m.DB.ExecContext(ctx, query, id)
 	if err != nil {
 		return err
 	}
-
 
 	// Checking if the movie record was found
 	rowsAffected, err := result.RowsAffected()
@@ -192,9 +184,8 @@ func (m MovieModel) Delete(id int64) error {
 	return nil
 }
 
-
 // List all movies in the database
-func (m MovieModel) GetAll(title string, genres []string, filters Filters) ([]*Movie, Metadata,error) {
+func (m MovieModel) GetAll(title string, genres []string, filters Filters) ([]*Movie, Metadata, error) {
 	// Defining the SQL query for retrieving the movie records
 	query := fmt.Sprintf(`
 		SELECT count(*) OVER(), id, created_at, title, year, runtime, genres, version
@@ -204,14 +195,13 @@ func (m MovieModel) GetAll(title string, genres []string, filters Filters) ([]*M
 		ORDER BY %s %s, id ASC
 		LIMIT $3 OFFSET $4`, filters.sortColumn(), filters.sortDirection())
 
-
 	// Creating a new context with a 3 second timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
 	// Creating an args slice to store the values for the placeholder parameters
 	args := []any{title, pq.Array(genres), filters.limit(), filters.offset()}
-	
+
 	// Executing the query using the DB connection pool
 	rows, err := m.DB.QueryContext(ctx, query, args...)
 	if err != nil {
@@ -220,11 +210,9 @@ func (m MovieModel) GetAll(title string, genres []string, filters Filters) ([]*M
 	// Closing the rows object when we return from the function
 	defer rows.Close()
 
-
 	// Declaring a slice to hold the movie records and the total number of records
 	totalRecords := 0
 	movies := []*Movie{}
-
 
 	// Looping through the rows in the result set
 	for rows.Next() {
@@ -250,27 +238,22 @@ func (m MovieModel) GetAll(title string, genres []string, filters Filters) ([]*M
 		movies = append(movies, &movie)
 	}
 
-
 	// Handling the errors encountered during the rows.Next() loop
 	if err = rows.Err(); err != nil {
 		return nil, Metadata{}, err
 	}
 
-
 	// Declaring a metadata struct to hold the metadata for the response
 	metadata := calculateMetadata(totalRecords, filters.Page, filters.PageSize)
-
 
 	// Returning the slice of movies
 	return movies, metadata, nil
 }
 
-
 // CRUD OPERATIONS for the MockMovieModel
 
-
 // Mock Movie Model for testing
-type MockMovieModel struct {}
+type MockMovieModel struct{}
 
 // CRUD OPERATIONS for the MockMovieModel
 

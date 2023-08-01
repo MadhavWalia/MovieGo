@@ -5,12 +5,10 @@ import (
 	"errors"
 )
 
-
 var (
 	ErrRecordNotFound = errors.New("record not found")
-	ErrEditConflict = errors.New("edit conflict")
+	ErrEditConflict   = errors.New("edit conflict")
 )
-
 
 //Parent Model struct for all the models
 type Models struct {
@@ -22,18 +20,17 @@ type Models struct {
 		GetAll(title string, genres []string, filters Filters) ([]*Movie, Metadata, error)
 	}
 	Permissions PermissionModel
-	Users UserModel
-	Tokens TokenModel
+	Users       UserModel
+	Tokens      TokenModel
 }
-
 
 // Factory method to create a new Models struct
 func NewModels(db *sql.DB) Models {
 	return Models{
-		Movies: MovieModel{DB: db},
+		Movies:      MovieModel{DB: db},
 		Permissions: PermissionModel{DB: db},
-		Users: UserModel{DB: db},
-		Tokens: TokenModel{DB: db},
+		Users:       UserModel{DB: db},
+		Tokens:      TokenModel{DB: db},
 	}
 }
 

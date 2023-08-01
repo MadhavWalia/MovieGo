@@ -14,14 +14,12 @@ import (
 //go:embed templates
 var templateFS embed.FS
 
-
 // Declaring a mailer struct to hold the mailer configuration
 // It has a dialer for connecting to the SMTP server and a sender address
 type Mailer struct {
 	dialer *mail.Dialer
 	sender string
 }
-
 
 // Declaring a factory function to create a new mailer
 func New(host string, port int, username, password, sender string) Mailer {
@@ -36,7 +34,6 @@ func New(host string, port int, username, password, sender string) Mailer {
 	}
 }
 
-
 // Declaring a method to send a mail
 func (m Mailer) Send(recipient, templateFile string, data any) error {
 	// Parsing the template file
@@ -44,7 +41,6 @@ func (m Mailer) Send(recipient, templateFile string, data any) error {
 	if err != nil {
 		return err
 	}
-
 
 	// Executing the "subject" template and storing the result in a buffer
 	subject := new(bytes.Buffer)
@@ -67,7 +63,6 @@ func (m Mailer) Send(recipient, templateFile string, data any) error {
 		return err
 	}
 
-
 	// Initializing a new email message and setting the headers
 	msg := mail.NewMessage()
 	msg.SetHeader("To", recipient)
@@ -75,7 +70,6 @@ func (m Mailer) Send(recipient, templateFile string, data any) error {
 	msg.SetHeader("Subject", subject.String())
 	msg.SetBody("text/plain", plainBody.String())
 	msg.AddAlternative("text/html", htmlBody.String())
-
 
 	// Connecting to the SMTP server and sending the email
 	err = m.dialer.DialAndSend(msg)
