@@ -1,6 +1,16 @@
 version: "3.8"
 
 services:
+  app:
+    container_name: movieGo
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - 4000:4000
+    env_file:
+      - .env
+
   postgres:
     container_name: postgres_movieGo
     image: postgres:15.3
