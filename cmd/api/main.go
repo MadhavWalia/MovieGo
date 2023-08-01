@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"flag"
+	"fmt"
 	"os"
 	"strings"
 	"sync"
@@ -17,6 +18,8 @@ import (
 )
 
 const version = "1.0.0"
+
+var buildTime string
 
 type config struct {
 	port int
@@ -87,8 +90,18 @@ func main() {
 		return nil
 	})
 
+	// Version Flag
+	displayVersion := flag.Bool("version", false, "Display version and exit")
+
 	// Parse the command-line flags
 	flag.Parse()
+
+	// If the version flag is provided, print the version and exit
+	if *displayVersion {
+		fmt.Printf("version:\t%s\n", version)
+		fmt.Printf("build time:\t%s\n", buildTime)
+		os.Exit(0)
+	}
 
 	// Initialize a new logger which writes messages to the standard outstream
 	logger := logs.New(os.Stdout, logs.LevelInfo)
