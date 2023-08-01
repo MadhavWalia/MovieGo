@@ -9,6 +9,7 @@ require (
 	github.com/lib/pq v1.10.2
 	golang.org/x/crypto v0.11.0
 	golang.org/x/time v0.3.0
+	github.com/felixge/httpsnoop v1.0.2
 )
 
 require (
