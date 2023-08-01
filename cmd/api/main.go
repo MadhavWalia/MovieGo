@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"flag"
-	"log"
 	"os"
 	"strings"
 	"sync"
@@ -17,62 +16,53 @@ import (
 	"moviego.madhav.net/internal/mail"
 )
 
-
 const version = "1.0.0"
 
 type config struct {
 	port int
-	env string
-	db struct {
-		dsn string
+	env  string
+	db   struct {
+		dsn          string
 		maxOpenConns int
 		maxIdleConns int
-		maxIdleTime string
+		maxIdleTime  string
 	}
 	limiter struct {
-		rps float64
-		burst int
+		rps     float64
+		burst   int
 		enabled bool
 	}
 	smtp struct {
-		host string
-		port int
+		host     string
+		port     int
 		username string
 		password string
-		sender string
+		sender   string
 	}
 	cors struct {
 		trustedOrigins []string
 	}
 }
 
-
 type application struct {
 	config config
 	logger *logs.Logger
 	models data.Models
 	mailer mail.Mailer
-	wg sync.WaitGroup
+	wg     sync.WaitGroup
 }
-
 
 func main() {
 
 	// Declare an instance of the config struct.
 	var cfg config
 
-	// Read the value dsn from the .env file, or use the default value
-	dsn, err := loadEnv("MOVIEGO_DB_DSN")
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	// Read the value of the port and env command-line flags into the config struct
 
 	//Application Settings Flags
 	flag.IntVar(&cfg.port, "port", 4000, "API server port")
 	flag.StringVar(&cfg.env, "env", "development", "Environment (development|staging|production)")
-	flag.StringVar(&cfg.db.dsn, "db-dsn", dsn, "PostgreSQL DSN")
+	flag.StringVar(&cfg.db.dsn, "db-dsn", "", "PostgreSQL DSN")
 
 	// Database Settings Flags
 	flag.IntVar(&cfg.db.maxOpenConns, "db-max-open-conns", 25, "PostgreSQL max open connections")
@@ -87,9 +77,9 @@ func main() {
 	// SMTP Settings Flags
 	flag.StringVar(&cfg.smtp.host, "smtp-host", "smtp.mailtrap.io", "SMTP server hostname")
 	flag.IntVar(&cfg.smtp.port, "smtp-port", 25, "SMTP server port")
-	flag.StringVar(&cfg.smtp.username, "smtp-username", "0836f8d5c95a14", "SMTP server username")
-	flag.StringVar(&cfg.smtp.password, "smtp-password", "fcf268bcf40b9d", "SMTP server password")
-	flag.StringVar(&cfg.smtp.sender, "smtp-sender", "MovieGo <madhavwalia8139@gmail.com>", "SMTP sender email address")
+	flag.StringVar(&cfg.smtp.username, "smtp-username", "", "SMTP server username")
+	flag.StringVar(&cfg.smtp.password, "smtp-password", "", "SMTP server password")
+	flag.StringVar(&cfg.smtp.sender, "smtp-sender", "", "SMTP sender email address")
 
 	// CORS Settings Flags
 	flag.Func("cors-trusted-origins", "CORS trusted origins (space separated)", func(val string) error {
@@ -97,14 +87,11 @@ func main() {
 		return nil
 	})
 
-
 	// Parse the command-line flags
 	flag.Parse()
 
-
 	// Initialize a new logger which writes messages to the standard outstream
 	logger := logs.New(os.Stdout, logs.LevelInfo)
-
 
 	// Initialize a new connection pool, passing in the DSN from the config struct
 	db, err := openDB(cfg)
@@ -113,10 +100,8 @@ func main() {
 	}
 	defer db.Close()
 
-
 	// Log a message to say that the connection pool has been successfully
 	logger.PrintInfo("database connection pool established", nil)
-
 
 	// Initialize a new instance of application containing the dependencies
 	app := &application{
@@ -126,7 +111,6 @@ func main() {
 		mailer: mail.New(cfg.smtp.host, cfg.smtp.port, cfg.smtp.username, cfg.smtp.password, cfg.smtp.sender),
 	}
 
-
 	// Start the HTTP server
 	err = app.serve()
 	if err != nil {
@@ -134,10 +118,9 @@ func main() {
 	}
 }
 
-
 // The openDB() function wraps sql.Open() and returns a sql.DB connection pool
 func openDB(cfg config) (*sql.DB, error) {
-	
+
 	// Use sql.Open() to create an empty connection pool, using the DSN from the config struct
 	db, err := sql.Open("postgres", cfg.db.dsn)
 	if err != nil {
@@ -147,7 +130,7 @@ func openDB(cfg config) (*sql.DB, error) {
 	// Set the maximum number of open (in-use + idle) connections in the pool.
 	db.SetMaxOpenConns(cfg.db.maxOpenConns)
 	db.SetMaxIdleConns(cfg.db.maxIdleConns)
-	
+
 	// Parse the dbMaxIdleTime setting from the config struct
 	duration, err := time.ParseDuration(cfg.db.maxIdleTime)
 	if err != nil {
