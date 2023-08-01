@@ -2,13 +2,16 @@ package main
 
 import (
 	"errors"
+	"expvar"
 	"fmt"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/felixge/httpsnoop"
 	"golang.org/x/time/rate"
 	"moviego.madhav.net/internal/data"
 	"moviego.madhav.net/internal/validator"
@@ -219,6 +222,7 @@ func (app *application) enableCORS(next http.Handler) http.Handler {
 	})
 }
 
+
 // Middleware for requiring an authenticated user
 func (app *application) requireAuthenticatedUser(next http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -293,4 +297,44 @@ func (app *application) requirePermission(code string, next http.HandlerFunc) ht
 
 	// Wrap the middleware around the requireActivatedUser() middleware
 	return app.requireActivatedUser(fn)
-} 
+}
+
+
+// Middleware for metrics
+func (app *application) metrics(next http.Handler) http.Handler {
+	// Initialize a new expvar variables
+	totalRequestsReceived := expvar.NewInt("total_requests_received")
+	totalResponsesSent := expvar.NewInt("total_responses_sent")
+	totalProcessingTimeMicroseconds := expvar.NewInt("total_processing_time_µs")
+
+	// Initialize a new expvar map to hold the count of responses sent for each status code
+	totalResponsesSentByStatus := expvar.NewMap("total_responses_sent_by_status")
+
+
+	// Return a closure over the next handler in the chain
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Recording the time at which the request arrived
+		start := time.Now()
+
+
+		// Incrementing the total number of requests received
+		totalRequestsReceived.Add(1)
+
+
+		// Capturing the status code and response size by wrapping the ResponseWriter with our httpsnoop library
+		metrics := httpsnoop.CaptureMetrics(next, w, r)
+
+
+		// Incrementing the total number of responses sent
+		totalResponsesSent.Add(1)
+
+
+		// Calculating the time taken for the request to be processed
+		duration := time.Since(start).Microseconds()
+		totalProcessingTimeMicroseconds.Add(duration)
+
+
+		// Incrementing the count of responses sent for the given status code
+		totalResponsesSentByStatus.Add(strconv.Itoa(metrics.Code), 1)
+	})
+}
