@@ -10,7 +10,7 @@ var (
 	ErrEditConflict   = errors.New("edit conflict")
 )
 
-//Parent Model struct for all the models
+// Parent Model struct for all the models
 type Models struct {
 	Movies interface {
 		Insert(movie *Movie) error
@@ -34,7 +34,7 @@ func NewModels(db *sql.DB) Models {
 	}
 }
 
-//Factory method to create a new Mock Movie struct for testing
+// Factory method to create a new Mock Movie struct for testing
 func NewMockModels() Models {
 	return Models{
 		Movies: MockMovieModel{},

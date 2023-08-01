@@ -22,7 +22,7 @@ type Movie struct {
 	Version   int32     // Counter to track the number of updates to the movie
 }
 
-//Validate method which validates the movie struct
+// Validate method which validates the movie struct
 func ValidateMovie(v *validator.Validator, movie *Movie) {
 	v.Check(*movie.Title != "", "title", "must be provided")
 	v.Check(len(*movie.Title) <= 500, "title", "must not be more than 500 bytes long")
