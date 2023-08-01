@@ -17,9 +17,10 @@ import (
 	"moviego.madhav.net/internal/mail"
 )
 
-const version = "1.0.0"
-
-var buildTime string
+var (
+	version   string
+	buildTime string
+)
 
 type config struct {
 	port int
