@@ -7,27 +7,12 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"os"
 	"strconv"
 	"strings"
 
-	"github.com/joho/godotenv"
 	"github.com/julienschmidt/httprouter"
 	"moviego.madhav.net/internal/validator"
 )
-
-// function to load the environment variables
-func loadEnv(key string) (string, error) {
-	//Loading the environment variables from the .env file
-	err := godotenv.Load(".env")
-	if err != nil {
-		return "", err
-	}
-
-	//Getting the value of the key from the environment variables
-	return os.Getenv(key), nil
-}
-
 
 type envelope map[string]any
 
@@ -56,7 +41,6 @@ func (app *application) writeJson(w http.ResponseWriter, status int, data envelo
 	return nil
 }
 
-
 // method to read the json request body into a destination struct
 func (app *application) readJson(w http.ResponseWriter, r *http.Request, dst any) error {
 
@@ -77,46 +61,39 @@ func (app *application) readJson(w http.ResponseWriter, r *http.Request, dst any
 		var invalidUnmarshalError *json.InvalidUnmarshalError
 
 		switch {
-			//For a syntax error, log the details and return a bad request error
-			case errors.As(err, &syntaxError):
-				return fmt.Errorf("body contains badly-formed JSON (at character %d)", syntaxError.Offset)
+		//For a syntax error, log the details and return a bad request error
+		case errors.As(err, &syntaxError):
+			return fmt.Errorf("body contains badly-formed JSON (at character %d)", syntaxError.Offset)
 
+		case errors.Is(err, io.ErrUnexpectedEOF):
+			return errors.New("body contains badly-formed JSON")
 
-			case errors.Is(err, io.ErrUnexpectedEOF):
-				return errors.New("body contains badly-formed JSON")
-			
+		//For an unmarshal type error, log the details and return a bad request error
+		case errors.As(err, &unmarshalTypeError):
+			if unmarshalTypeError.Field != "" {
+				return fmt.Errorf("body contains incorrect JSON type for field %q", unmarshalTypeError.Field)
+			}
+			return fmt.Errorf("body contains incorrect JSON type (at character %d)", unmarshalTypeError.Offset)
 
-			//For an unmarshal type error, log the details and return a bad request error
-			case errors.As(err, &unmarshalTypeError):
-				if unmarshalTypeError.Field != "" {
-					return fmt.Errorf("body contains incorrect JSON type for field %q", unmarshalTypeError.Field)
-				}
-				return fmt.Errorf("body contains incorrect JSON type (at character %d)", unmarshalTypeError.Offset)
+		case errors.Is(err, io.EOF):
+			return errors.New("body must not be empty")
 
+		//For an unknown field error, log the details and return a bad request error
+		case strings.HasPrefix(err.Error(), "json: unknown field"):
+			fieldname := strings.TrimPrefix(err.Error(), "json: unknown field ")
+			return fmt.Errorf("body contains unknown key %s", fieldname)
 
-			case errors.Is(err, io.EOF):
-				return errors.New("body must not be empty")
+		//For a too large error, log the details and return a bad request error
+		case err.Error() == "http: request body too large":
+			return fmt.Errorf("body must not be larger than %d bytes", maxBytes)
 
-			
-			//For an unknown field error, log the details and return a bad request error
-			case strings.HasPrefix(err.Error(), "json: unknown field"):
-				fieldname := strings.TrimPrefix(err.Error(), "json: unknown field ")
-				return fmt.Errorf("body contains unknown key %s", fieldname)
+		//For an invalid unmarshal error, log the details and return a bad request error
+		case errors.As(err, &invalidUnmarshalError):
+			panic(err)
 
-			
-			//For a too large error, log the details and return a bad request error
-			case err.Error() == "http: request body too large":
-				return fmt.Errorf("body must not be larger than %d bytes", maxBytes)
-
-
-			//For an invalid unmarshal error, log the details and return a bad request error
-			case errors.As(err, &invalidUnmarshalError):
-				panic(err)
-
-
-			//For any other type of error, return the error message as-is
-			default:
-				return err
+		//For any other type of error, return the error message as-is
+		default:
+			return err
 		}
 	}
 
@@ -128,9 +105,8 @@ func (app *application) readJson(w http.ResponseWriter, r *http.Request, dst any
 	return nil
 }
 
-
 // method to read the id parameter from the URL
-func (app *application) readIDParam (r *http.Request) (int64, error) {
+func (app *application) readIDParam(r *http.Request) (int64, error) {
 	params := httprouter.ParamsFromContext(r.Context())
 	id, err := strconv.ParseInt(params.ByName("id"), 10, 64)
 	if err != nil || id < 1 {
@@ -138,7 +114,6 @@ func (app *application) readIDParam (r *http.Request) (int64, error) {
 	}
 	return id, nil
 }
-
 
 // method to read CSV data from the query string
 func (app *application) readCSV(ps url.Values, key string, defaultValue []string) []string {
@@ -153,7 +128,6 @@ func (app *application) readCSV(ps url.Values, key string, defaultValue []string
 	// Else, split the value into a []string slice
 	return strings.Split(csv, ",")
 }
-
 
 // method to read an integer value from the query string and convert it to an int
 func (app *application) readInt(ps url.Values, key string, defaultValue int, v *validator.Validator) int {
@@ -176,7 +150,6 @@ func (app *application) readInt(ps url.Values, key string, defaultValue int, v *
 	return i
 }
 
-
 // method to read a string value from the query string
 func (app *application) readString(ps url.Values, key string, defaultValue string) string {
 	// Extract the value from the query string
@@ -190,7 +163,6 @@ func (app *application) readString(ps url.Values, key string, defaultValue strin
 	// Return the string value
 	return s
 }
-
 
 // method to run background tasks
 func (app *application) background(fn func()) {
