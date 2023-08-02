@@ -8,8 +8,23 @@ services:
       dockerfile: Dockerfile
     ports:
       - 4000:4000
+    depends_on:
+      - postgres
     env_file:
       - .env
+
+  migrate:
+    image: migrate/migrate:v4.15.2
+    profiles: ["tools"]
+    entrypoint: ["migrate", "-path=/migrations/", "-database=${MOVIEGO_DB_DSN}"]
+    command: ["up"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: on-failure
+    env_file:
+      - .env
+    
 
   postgres:
     container_name: postgres_movieGo
