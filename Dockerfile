@@ -7,10 +7,6 @@ RUN apt-get update && apt-get install -y git
 # Install make
 RUN apt-get update && apt-get install -y make
 
-# Install the migrate cli tool for database migrations
-# RUN  curl -L https://github.com/golang-migrate/migrate/releases/download/v4.14.1/migrate.linux-amd64.tar.gz | tar xvz
-# RUN mv migrate.linux-amd64 $GOPATH/bin/migrate
-
 # Install staticcheck for linting
 RUN go install honnef.co/go/tools/cmd/staticcheck@latest
 
