@@ -29,16 +29,16 @@ run/api:
 
 ## db/migrations/new name=$1: create a new database migration
 .PHONY: db/migrations/new
-db/migrations/new:
+db/migrations/new: confirm
 	@echo "Creating a new migration file for $(name)..."
 	@migrate create -ext sql -dir ./migrations -seq $(name)
 
 
 ## db/migrations/up: apply all up database migrations
 .PHONY: db/migrations/up
-db/migrations/up: confirm
+db/migrations/up:
 	@echo "Running the up migrations..."
-	@migrate -path ./migrations -database "postgres://madhav:pa55word@localhost:5432/postgres?sslmode=disable" -verbose up
+	@migrate -path ./migrations -database ${MOVIEGO_DB_DSN} -verbose up
 
 
 # ==================================================================================== #
@@ -80,3 +80,15 @@ build/api:
 	@echo "Building the cmd/api..."
 	go build -ldflags=${linker_flags} -o=./bin/api ./cmd/api
 	GOOS=linux GOARCH=amd64 go build -ldflags=${linker_flags} -o=./bin/linux_amd64/api ./cmd/api
+
+
+# ==================================================================================== #
+# BUILD
+# ==================================================================================== #
+
+
+## run/binary: run the cmd/api binary
+.PHONY: run/binary
+run/binary:
+	@echo "Running the cmd/api binary..."
+	./bin/api -db-dsn=${MOVIEGO_DB_DSN} -smtp-sender=${SMTP_SENDER} -smtp-username=${SMTP_USERNAME} -smtp-password=${SMTP_PASSWORD}
